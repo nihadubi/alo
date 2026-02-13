@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react';
-import { SignedIn, SignedOut, SignIn, SignUp, useAuth, useUser } from '@clerk/clerk-react';
-import NavigationSidebar from './components/NavigationSidebar.jsx';
-import ChatContainer from './components/ChatContainer.jsx';
+import { SignedIn, SignedOut, SignIn, SignUp, useAuth } from '@clerk/clerk-react';
+import Sidebar from './components/Sidebar.jsx';
+import ChatArea from './components/ChatArea.jsx';
 
 function App() {
   const [authView, setAuthView] = useState('signIn');
   const [profileSyncStatus, setProfileSyncStatus] = useState('idle');
   const { isSignedIn, userId, getToken } = useAuth();
-  const { user } = useUser();
 
   useEffect(() => {
     const syncProfile = async () => {
@@ -47,39 +46,12 @@ function App() {
     syncProfile();
   }, [getToken, isSignedIn, profileSyncStatus, userId]);
 
-  const [communities, setCommunities] = useState([]);
-
   const messages = [
     { id: 1, room: 'ui-feedback', text: 'Yeni ikon seti hazırdır, baxa bilərsən?', time: '2 dəq əvvəl' },
     { id: 2, room: 'release-plan', text: 'Release checklisti yeniləndi.', time: '12 dəq əvvəl' },
     { id: 3, room: 'campaign-ideas', text: 'Kampaniya ideyalarını topladım.', time: '1 saat əvvəl' },
     { id: 4, room: 'team-sync', text: 'Sabahkı sync üçün gündəmi göndərirəm.', time: 'dünən' },
   ];
-
-  useEffect(() => {
-    if (!isSignedIn) {
-      return
-    }
-
-    const loadCommunities = async () => {
-      try {
-        const response = await fetch('/api/communities')
-        if (!response.ok) {
-          return
-        }
-        const data = await response.json()
-        if (Array.isArray(data)) {
-          setCommunities(data)
-        }
-      } catch (error) {
-        console.error('Communities fetch failed', error)
-      }
-    }
-
-    loadCommunities()
-  }, [isSignedIn])
-
-  const displayName = user?.fullName || user?.username || 'İstifadəçi'
 
   return (
     <>
@@ -123,10 +95,8 @@ function App() {
 
       <SignedIn>
         <div className="flex h-screen bg-[#2B2D31] text-slate-200 overflow-hidden font-sans">
-          <NavigationSidebar
-            communities={communities}
-          />
-          <ChatContainer displayName={displayName} messages={messages} />
+          <Sidebar />
+          <ChatArea messages={messages} />
         </div>
       </SignedIn>
     </>
