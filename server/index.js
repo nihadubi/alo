@@ -12,6 +12,32 @@ app.get('/api/health', (req, res) => {
   res.json({ ok: true })
 })
 
+app.get('/api/communities', ClerkExpressRequireAuth(), async (req, res) => {
+  try {
+    const userId = req.auth.userId
+    const profile = await prisma.profile.findUnique({
+      where: { userId },
+      select: { id: true },
+    })
+
+    if (!profile) {
+      res.json([])
+      return
+    }
+
+    const communities = await prisma.community.findMany({
+      where: { ownerId: profile.id },
+      select: { id: true, name: true },
+      orderBy: { createdAt: 'desc' },
+    })
+
+    res.json(communities)
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'COMMUNITIES_FETCH_FAILED' })
+  }
+})
+
 app.post('/api/profile/sync', ClerkExpressRequireAuth(), async (req, res) => {
   try {
     const userId = req.auth.userId
