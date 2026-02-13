@@ -1,0 +1,52 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Profile {
+  id        String     @id @default(cuid())
+  userId    String     @unique
+  email     String?
+  name      String?
+  imageUrl  String?
+  communities Community[] @relation("CommunityOwner")
+  messages  Message[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model Community {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  ownerId     String
+  owner       Profile  @relation("CommunityOwner", fields: [ownerId], references: [id])
+  rooms       Room[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Room {
+  id          String   @id @default(cuid())
+  name        String
+  communityId String
+  community   Community @relation(fields: [communityId], references: [id])
+  messages    Message[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  content   String
+  roomId    String
+  room      Room     @relation(fields: [roomId], references: [id])
+  profileId String
+  profile   Profile  @relation(fields: [profileId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
