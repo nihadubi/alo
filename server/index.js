@@ -25,46 +25,41 @@ const io = new Server(httpServer, {
   },
 })
 
-const globalRoomName = 'general'
-const globalCommunityName = 'Ümumi'
-const globalSocketRoom = 'room:global'
+const roomName = 'general'
+const socketRoomPrefix = 'room:'
 
-const getOrCreateGlobalRoom = async (ownerId) => {
-  let community = await prisma.community.findFirst({
-    where: { name: globalCommunityName },
-    select: { id: true },
+const getOrCreateCommunityRoom = async (communityId) => {
+  const room = await prisma.room.findFirst({
+    where: { communityId, name: roomName },
+    select: { id: true, name: true, communityId: true },
   })
 
-  if (!community) {
-    community = await prisma.community.create({
-      data: {
-        name: globalCommunityName,
-        ownerId,
-      },
-      select: { id: true },
-    })
+  if (room) {
+    return room
   }
 
-  let room = await prisma.room.findFirst({
-    where: { communityId: community.id, name: globalRoomName },
-    select: { id: true, name: true },
+  return prisma.room.create({
+    data: {
+      name: roomName,
+      communityId,
+    },
+    select: { id: true, name: true, communityId: true },
   })
-
-  if (!room) {
-    room = await prisma.room.create({
-      data: {
-        name: globalRoomName,
-        communityId: community.id,
-      },
-      select: { id: true, name: true },
-    })
-  }
-
-  return room
 }
 
 io.on('connection', (socket) => {
-  socket.join(globalSocketRoom)
+  socket.on('room:join', ({ communityId } = {}) => {
+    if (!communityId) {
+      return
+    }
+    const targetRoom = `${socketRoomPrefix}${communityId}`
+    const currentRoom = socket.data.currentRoom
+    if (currentRoom && currentRoom !== targetRoom) {
+      socket.leave(currentRoom)
+    }
+    socket.join(targetRoom)
+    socket.data.currentRoom = targetRoom
+  })
 })
 
 app.get('/api/health', (req, res) => {
@@ -154,18 +149,23 @@ app.post('/api/profile/sync', ClerkExpressRequireAuth(), async (req, res) => {
 
 app.get('/api/messages', ClerkExpressRequireAuth(), async (req, res) => {
   try {
-    const userId = req.auth.userId
-    const profile = await prisma.profile.findUnique({
-      where: { userId },
-      select: { id: true },
-    })
-
-    if (!profile) {
-      res.json([])
+    const communityId = typeof req.query?.communityId === 'string' ? req.query.communityId : ''
+    if (!communityId) {
+      res.status(400).json({ error: 'COMMUNITY_ID_REQUIRED' })
       return
     }
 
-    const room = await getOrCreateGlobalRoom(profile.id)
+    const community = await prisma.community.findUnique({
+      where: { id: communityId },
+      select: { id: true },
+    })
+
+    if (!community) {
+      res.status(404).json({ error: 'COMMUNITY_NOT_FOUND' })
+      return
+    }
+
+    const room = await getOrCreateCommunityRoom(community.id)
     const messages = await prisma.message.findMany({
       where: { roomId: room.id },
       orderBy: { createdAt: 'asc' },
@@ -175,6 +175,7 @@ app.get('/api/messages', ClerkExpressRequireAuth(), async (req, res) => {
         content: true,
         createdAt: true,
         profileId: true,
+        roomId: true,
         profile: {
           select: {
             name: true,
@@ -194,6 +195,28 @@ app.get('/api/messages', ClerkExpressRequireAuth(), async (req, res) => {
 app.post('/api/messages', ClerkExpressRequireAuth(), async (req, res) => {
   try {
     const userId = req.auth.userId
+    const requestedUserId = typeof req.body?.userId === 'string' ? req.body.userId : ''
+    if (requestedUserId && requestedUserId !== userId) {
+      res.status(403).json({ error: 'USER_MISMATCH' })
+      return
+    }
+
+    const communityId = typeof req.body?.communityId === 'string' ? req.body.communityId : ''
+    if (!communityId) {
+      res.status(400).json({ error: 'COMMUNITY_ID_REQUIRED' })
+      return
+    }
+
+    const community = await prisma.community.findUnique({
+      where: { id: communityId },
+      select: { id: true },
+    })
+
+    if (!community) {
+      res.status(404).json({ error: 'COMMUNITY_NOT_FOUND' })
+      return
+    }
+
     const profile = await prisma.profile.findUnique({
       where: { userId },
       select: { id: true },
@@ -210,7 +233,7 @@ app.post('/api/messages', ClerkExpressRequireAuth(), async (req, res) => {
       return
     }
 
-    const room = await getOrCreateGlobalRoom(profile.id)
+    const room = await getOrCreateCommunityRoom(community.id)
     const message = await prisma.message.create({
       data: {
         content,
@@ -222,6 +245,7 @@ app.post('/api/messages', ClerkExpressRequireAuth(), async (req, res) => {
         content: true,
         createdAt: true,
         profileId: true,
+        roomId: true,
         profile: {
           select: {
             name: true,
@@ -231,7 +255,7 @@ app.post('/api/messages', ClerkExpressRequireAuth(), async (req, res) => {
       },
     })
 
-    io.to(globalSocketRoom).emit('message:new', message)
+    io.to(`${socketRoomPrefix}${community.id}`).emit('message:new', message)
     res.status(201).json(message)
   } catch (error) {
     console.error(error)

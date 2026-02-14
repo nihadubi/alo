@@ -5,10 +5,11 @@ import axios from 'axios'
 import { useAuth } from '@clerk/clerk-react'
 
 function ChatArea() {
-  const { getToken, isSignedIn } = useAuth()
+  const { getToken, isSignedIn, userId } = useAuth()
   const [messages, setMessages] = useState([])
   const [messageInput, setMessageInput] = useState('')
   const [isSending, setIsSending] = useState(false)
+  const [activeCommunity, setActiveCommunity] = useState(null)
   const socketRef = useRef(null)
 
   const formatTime = (value) => {
@@ -39,6 +40,33 @@ function ChatArea() {
       return
     }
 
+    const loadCommunities = async () => {
+      try {
+        const token = await getToken()
+        if (!token) {
+          return
+        }
+        const response = await axios.get('/api/communities', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        if (Array.isArray(response.data) && response.data.length > 0) {
+          setActiveCommunity(response.data[0])
+        }
+      } catch (error) {
+        console.error('Communities fetch failed', error)
+      }
+    }
+
+    loadCommunities()
+  }, [getToken, isSignedIn])
+
+  useEffect(() => {
+    if (!isSignedIn || !activeCommunity?.id) {
+      return
+    }
+
     const loadMessages = async () => {
       try {
         const token = await getToken()
@@ -46,6 +74,9 @@ function ChatArea() {
           return
         }
         const response = await axios.get('/api/messages', {
+          params: {
+            communityId: activeCommunity.id,
+          },
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -59,7 +90,7 @@ function ChatArea() {
     }
 
     loadMessages()
-  }, [getToken, isSignedIn])
+  }, [activeCommunity?.id, getToken, isSignedIn])
 
   useEffect(() => {
     if (!isSignedIn || socketRef.current) {
@@ -85,9 +116,16 @@ function ChatArea() {
     }
   }, [isSignedIn])
 
+  useEffect(() => {
+    if (!socketRef.current || !activeCommunity?.id) {
+      return
+    }
+    socketRef.current.emit('room:join', { communityId: activeCommunity.id })
+  }, [activeCommunity?.id])
+
   const handleSend = async () => {
     const content = messageInput.trim()
-    if (!content || isSending) {
+    if (!content || isSending || !activeCommunity?.id) {
       return
     }
 
@@ -99,7 +137,7 @@ function ChatArea() {
       }
       const response = await axios.post(
         '/api/messages',
-        { content },
+        { content, communityId: activeCommunity.id, userId },
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -129,7 +167,9 @@ function ChatArea() {
       <div className="h-16 px-6 flex items-center justify-between border-b border-black/20">
         <div>
           <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Mesajlar</p>
-          <h2 className="text-lg font-semibold text-slate-100">Ümumi söhbət</h2>
+          <h2 className="text-lg font-semibold text-slate-100">
+            {activeCommunity?.name || 'Ümumi söhbət'}
+          </h2>
         </div>
         <div className="text-xs text-slate-500">Aktiv</div>
       </div>
