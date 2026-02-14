@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { SignedIn, SignedOut, SignIn, SignUp, useAuth } from '@clerk/clerk-react';
 import Sidebar from './components/Sidebar.jsx';
 import ChatArea from './components/ChatArea.jsx';
+import MediaRoom from './components/MediaRoom.jsx';
 
 function App() {
   const [authView, setAuthView] = useState('signIn');
+  const [activeChannel, setActiveChannel] = useState({ type: 'text', name: 'Ümumi söhbət' });
   const { isSignedIn, userId, getToken } = useAuth();
   const profileSyncRef = useRef({ status: 'idle', userId: null });
 
@@ -93,8 +95,12 @@ function App() {
 
       <SignedIn>
         <div className="flex h-screen bg-[#2B2D31] text-slate-200 overflow-hidden font-sans">
-          <Sidebar />
-          <ChatArea />
+          <Sidebar activeChannel={activeChannel} onChannelChange={setActiveChannel} />
+          {activeChannel?.type === 'audio' ? (
+            <MediaRoom roomName={activeChannel.name || 'General'} />
+          ) : (
+            <ChatArea />
+          )}
         </div>
       </SignedIn>
     </>

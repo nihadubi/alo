@@ -7,6 +7,7 @@ const express = (await import('express')).default
 const cors = (await import('cors')).default
 const { createServer } = await import('node:http')
 const { Server } = await import('socket.io')
+const { AccessToken } = await import('livekit-server-sdk')
 const { PrismaClient } = await import('@prisma/client')
 const { ClerkExpressRequireAuth, clerkClient } = await import('@clerk/clerk-sdk-node')
 
@@ -144,6 +145,43 @@ app.post('/api/profile/sync', ClerkExpressRequireAuth(), async (req, res) => {
   } catch (error) {
     console.error(error)
     res.status(500).json({ error: 'PROFILE_SYNC_FAILED' })
+  }
+})
+
+app.post('/api/livekit/token', ClerkExpressRequireAuth(), async (req, res) => {
+  try {
+    const userId = req.auth.userId
+    const roomName = typeof req.body?.roomName === 'string' ? req.body.roomName.trim() : ''
+    if (!roomName) {
+      res.status(400).json({ error: 'ROOM_NAME_REQUIRED' })
+      return
+    }
+
+    const livekitUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL
+    if (!livekitUrl) {
+      res.status(500).json({ error: 'LIVEKIT_URL_MISSING' })
+      return
+    }
+
+    const user = await clerkClient.users.getUser(userId)
+    const name = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.username || userId
+
+    const token = new AccessToken(process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET, {
+      identity: userId,
+      name,
+    })
+
+    token.addGrant({
+      room: roomName,
+      roomJoin: true,
+      canPublish: true,
+      canSubscribe: true,
+    })
+
+    res.json({ token: token.toJwt(), url: livekitUrl })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'LIVEKIT_TOKEN_FAILED' })
   }
 })
 

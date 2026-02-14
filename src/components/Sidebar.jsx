@@ -3,7 +3,7 @@ import axios from 'axios'
 import { Plus } from 'lucide-react'
 import { UserButton, useAuth } from '@clerk/clerk-react'
 
-function Sidebar() {
+function Sidebar({ activeChannel, onChannelChange }) {
   const { getToken, isSignedIn } = useAuth()
   const [communities, setCommunities] = useState([])
   const [isOpen, setIsOpen] = useState(false)
@@ -90,12 +90,18 @@ function Sidebar() {
 
       <div className="flex-1 w-full mt-4 flex flex-col items-center gap-3 overflow-y-auto custom-scrollbar">
         {communities.map((community) => (
-          <div
+          <button
             key={community.id}
-            className="h-12 w-12 rounded-full bg-[#2B2D31] text-slate-200 flex items-center justify-center text-xs font-semibold"
+            type="button"
+            onClick={() =>
+              onChannelChange?.({ type: 'text', name: community.name || 'Ümumi söhbət' })
+            }
+            className={`h-12 w-12 rounded-full text-slate-200 flex items-center justify-center text-xs font-semibold transition-colors ${
+              activeChannel?.type === 'text' ? 'bg-indigo-500/80' : 'bg-[#2B2D31]'
+            }`}
           >
             {getInitials(community.name || '') || 'C'}
-          </div>
+          </button>
         ))}
       </div>
 
@@ -104,9 +110,15 @@ function Sidebar() {
           Səsli Kanallar
         </p>
         <div className="mt-3 flex items-center justify-center">
-          <div className="h-9 w-9 rounded-full bg-[#2B2D31] text-[10px] text-slate-200 flex items-center justify-center">
+          <button
+            type="button"
+            onClick={() => onChannelChange?.({ type: 'audio', name: 'General' })}
+            className={`h-9 w-9 rounded-full text-[10px] text-slate-200 flex items-center justify-center transition-colors ${
+              activeChannel?.type === 'audio' ? 'bg-indigo-500/80' : 'bg-[#2B2D31]'
+            }`}
+          >
             General
-          </div>
+          </button>
         </div>
       </div>
 
