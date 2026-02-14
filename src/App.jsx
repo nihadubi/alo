@@ -51,13 +51,6 @@ function App() {
     syncProfile();
   }, [getToken, isSignedIn, userId]);
 
-  const messages = [
-    { id: 1, room: 'ui-feedback', text: 'Yeni ikon seti hazırdır, baxa bilərsən?', time: '2 dəq əvvəl' },
-    { id: 2, room: 'release-plan', text: 'Release checklisti yeniləndi.', time: '12 dəq əvvəl' },
-    { id: 3, room: 'campaign-ideas', text: 'Kampaniya ideyalarını topladım.', time: '1 saat əvvəl' },
-    { id: 4, room: 'team-sync', text: 'Sabahkı sync üçün gündəmi göndərirəm.', time: 'dünən' },
-  ];
-
   return (
     <>
       <SignedOut>
@@ -101,7 +94,7 @@ function App() {
       <SignedIn>
         <div className="flex h-screen bg-[#2B2D31] text-slate-200 overflow-hidden font-sans">
           <Sidebar />
-          <ChatArea messages={messages} />
+          <ChatArea />
         </div>
       </SignedIn>
     </>

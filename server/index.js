@@ -5,6 +5,8 @@ dotenv.config()
 
 const express = (await import('express')).default
 const cors = (await import('cors')).default
+const { createServer } = await import('node:http')
+const { Server } = await import('socket.io')
 const { PrismaClient } = await import('@prisma/client')
 const { ClerkExpressRequireAuth, clerkClient } = await import('@clerk/clerk-sdk-node')
 
@@ -13,6 +15,57 @@ const prisma = new PrismaClient()
 
 app.use(cors())
 app.use(express.json())
+
+const clientOrigin = process.env.CLIENT_ORIGIN || 'http://localhost:5173'
+const httpServer = createServer(app)
+const io = new Server(httpServer, {
+  cors: {
+    origin: clientOrigin,
+    methods: ['GET', 'POST'],
+  },
+})
+
+const globalRoomName = 'general'
+const globalCommunityName = 'Ümumi'
+const globalSocketRoom = 'room:global'
+
+const getOrCreateGlobalRoom = async (ownerId) => {
+  let community = await prisma.community.findFirst({
+    where: { name: globalCommunityName },
+    select: { id: true },
+  })
+
+  if (!community) {
+    community = await prisma.community.create({
+      data: {
+        name: globalCommunityName,
+        ownerId,
+      },
+      select: { id: true },
+    })
+  }
+
+  let room = await prisma.room.findFirst({
+    where: { communityId: community.id, name: globalRoomName },
+    select: { id: true, name: true },
+  })
+
+  if (!room) {
+    room = await prisma.room.create({
+      data: {
+        name: globalRoomName,
+        communityId: community.id,
+      },
+      select: { id: true, name: true },
+    })
+  }
+
+  return room
+}
+
+io.on('connection', (socket) => {
+  socket.join(globalSocketRoom)
+})
 
 app.get('/api/health', (req, res) => {
   res.json({ ok: true })
@@ -99,6 +152,93 @@ app.post('/api/profile/sync', ClerkExpressRequireAuth(), async (req, res) => {
   }
 })
 
+app.get('/api/messages', ClerkExpressRequireAuth(), async (req, res) => {
+  try {
+    const userId = req.auth.userId
+    const profile = await prisma.profile.findUnique({
+      where: { userId },
+      select: { id: true },
+    })
+
+    if (!profile) {
+      res.json([])
+      return
+    }
+
+    const room = await getOrCreateGlobalRoom(profile.id)
+    const messages = await prisma.message.findMany({
+      where: { roomId: room.id },
+      orderBy: { createdAt: 'asc' },
+      take: 50,
+      select: {
+        id: true,
+        content: true,
+        createdAt: true,
+        profileId: true,
+        profile: {
+          select: {
+            name: true,
+            imageUrl: true,
+          },
+        },
+      },
+    })
+
+    res.json(messages)
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'MESSAGES_FETCH_FAILED' })
+  }
+})
+
+app.post('/api/messages', ClerkExpressRequireAuth(), async (req, res) => {
+  try {
+    const userId = req.auth.userId
+    const profile = await prisma.profile.findUnique({
+      where: { userId },
+      select: { id: true },
+    })
+
+    if (!profile) {
+      res.status(404).json({ error: 'PROFILE_NOT_FOUND' })
+      return
+    }
+
+    const content = typeof req.body?.content === 'string' ? req.body.content.trim() : ''
+    if (!content) {
+      res.status(400).json({ error: 'CONTENT_REQUIRED' })
+      return
+    }
+
+    const room = await getOrCreateGlobalRoom(profile.id)
+    const message = await prisma.message.create({
+      data: {
+        content,
+        roomId: room.id,
+        profileId: profile.id,
+      },
+      select: {
+        id: true,
+        content: true,
+        createdAt: true,
+        profileId: true,
+        profile: {
+          select: {
+            name: true,
+            imageUrl: true,
+          },
+        },
+      },
+    })
+
+    io.to(globalSocketRoom).emit('message:new', message)
+    res.status(201).json(message)
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'MESSAGE_CREATE_FAILED' })
+  }
+})
+
 app.use((error, req, res, next) => {
   void next
   const code = error?.errors?.[0]?.code
@@ -114,6 +254,6 @@ app.use((error, req, res, next) => {
 
 const port = process.env.PORT ? Number(process.env.PORT) : 4000
 
-app.listen(port, () => {
+httpServer.listen(port, () => {
   console.log(`API running on http://localhost:${port}`)
 })
