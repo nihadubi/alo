@@ -6,7 +6,7 @@ import ChatArea from './components/ChatArea.jsx';
 import MediaRoom from './components/MediaRoom.jsx';
 
 function TitleBar() {
-  const hasControls = typeof window !== 'undefined' && window.electronControls;
+  const hasControls = typeof window !== 'undefined' && window.electronAPI;
 
   if (!hasControls) {
     return null;
@@ -15,27 +15,28 @@ function TitleBar() {
   return (
     <div className="app-titlebar">
       <div className="app-titlebar__drag">
+        <div className="app-titlebar__logo">A</div>
         <span className="text-[11px] uppercase tracking-[0.4em] text-slate-400">Alo</span>
       </div>
       <div className="app-titlebar__controls">
         <button
           type="button"
           className="app-titlebar__button"
-          onClick={() => window.electronControls?.minimize()}
+          onClick={() => window.electronAPI?.minimize()}
         >
           <Minus size={14} />
         </button>
         <button
           type="button"
           className="app-titlebar__button"
-          onClick={() => window.electronControls?.toggleMaximize()}
+          onClick={() => window.electronAPI?.toggleMaximize()}
         >
           <Square size={13} />
         </button>
         <button
           type="button"
           className="app-titlebar__button app-titlebar__button--danger"
-          onClick={() => window.electronControls?.close()}
+          onClick={() => window.electronAPI?.close()}
         >
           <X size={14} />
         </button>
@@ -50,7 +51,8 @@ function App() {
   const [isVoiceLive, setIsVoiceLive] = useState(false);
   const { isSignedIn, userId, getToken } = useAuth();
   const profileSyncRef = useRef({ status: 'idle', userId: null });
-  const apiBaseUrl = import.meta.env.PROD ? import.meta.env.VITE_API_BASE_URL : import.meta.env.VITE_API_BASE_URL || '';
+  const windowBaseUrl = typeof window !== 'undefined' ? window.__APP_BASE_URL__ : '';
+  const apiBaseUrl = windowBaseUrl || (import.meta.env.PROD ? import.meta.env.VITE_API_BASE_URL : import.meta.env.VITE_API_BASE_URL || '');
 
   useEffect(() => {
     const syncProfile = async () => {

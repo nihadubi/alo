@@ -79,8 +79,10 @@ function ChatArea({ activeChannel }) {
       return
     }
 
+    const windowBaseUrl = typeof window !== 'undefined' ? window.__APP_BASE_URL__ : ''
     const socketUrl =
       import.meta.env.VITE_SOCKET_URL ||
+      windowBaseUrl ||
       import.meta.env.VITE_API_BASE_URL ||
       'http://localhost:4000'
     const socket = io(socketUrl, {

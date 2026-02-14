@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
+import { autoUpdater } from 'electron-updater'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -39,6 +40,11 @@ const createWindow = () => {
 app.whenReady().then(() => {
   createWindow()
 
+  if (app.isPackaged && process.env.AUTO_UPDATE_URL) {
+    autoUpdater.setFeedURL({ url: process.env.AUTO_UPDATE_URL })
+    autoUpdater.checkForUpdatesAndNotify()
+  }
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow()
@@ -77,3 +83,8 @@ ipcMain.handle('window:close', () => {
     win.close()
   }
 })
+
+ipcMain.handle('app:get-config', () => ({
+  isPackaged: app.isPackaged,
+  apiBaseUrl: process.env.ALO_PROD_API_URL || process.env.VITE_API_BASE_URL || '',
+}))
