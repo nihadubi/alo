@@ -38,6 +38,40 @@ app.get('/api/communities', ClerkExpressRequireAuth(), async (req, res) => {
   }
 })
 
+app.post('/api/communities', ClerkExpressRequireAuth(), async (req, res) => {
+  try {
+    const userId = req.auth.userId
+    const profile = await prisma.profile.findUnique({
+      where: { userId },
+      select: { id: true },
+    })
+
+    if (!profile) {
+      res.status(404).json({ error: 'PROFILE_NOT_FOUND' })
+      return
+    }
+
+    const name = typeof req.body?.name === 'string' ? req.body.name.trim() : ''
+    if (!name) {
+      res.status(400).json({ error: 'NAME_REQUIRED' })
+      return
+    }
+
+    const community = await prisma.community.create({
+      data: {
+        name,
+        ownerId: profile.id,
+      },
+      select: { id: true, name: true },
+    })
+
+    res.status(201).json(community)
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'COMMUNITY_CREATE_FAILED' })
+  }
+})
+
 app.post('/api/profile/sync', ClerkExpressRequireAuth(), async (req, res) => {
   try {
     const userId = req.auth.userId

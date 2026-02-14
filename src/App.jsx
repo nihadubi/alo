@@ -1,25 +1,30 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { SignedIn, SignedOut, SignIn, SignUp, useAuth } from '@clerk/clerk-react';
 import Sidebar from './components/Sidebar.jsx';
 import ChatArea from './components/ChatArea.jsx';
 
 function App() {
   const [authView, setAuthView] = useState('signIn');
-  const [profileSyncStatus, setProfileSyncStatus] = useState('idle');
   const { isSignedIn, userId, getToken } = useAuth();
+  const profileSyncRef = useRef({ status: 'idle', userId: null });
 
   useEffect(() => {
     const syncProfile = async () => {
-      if (!isSignedIn || !userId || profileSyncStatus === 'done') {
+      if (!isSignedIn || !userId) {
+        return;
+      }
+
+      const current = profileSyncRef.current;
+      if (current.userId === userId && (current.status === 'loading' || current.status === 'done')) {
         return;
       }
 
       try {
-        setProfileSyncStatus('loading');
+        profileSyncRef.current = { status: 'loading', userId };
         const token = await getToken();
 
         if (!token) {
-          setProfileSyncStatus('error');
+          profileSyncRef.current = { status: 'error', userId };
           return;
         }
 
@@ -32,19 +37,19 @@ function App() {
         });
 
         if (!response.ok) {
-          setProfileSyncStatus('error');
+          profileSyncRef.current = { status: 'error', userId };
           return;
         }
 
-        setProfileSyncStatus('done');
+        profileSyncRef.current = { status: 'done', userId };
       } catch (error) {
         console.error('Profile sync failed', error);
-        setProfileSyncStatus('error');
+        profileSyncRef.current = { status: 'error', userId };
       }
     };
 
     syncProfile();
-  }, [getToken, isSignedIn, profileSyncStatus, userId]);
+  }, [getToken, isSignedIn, userId]);
 
   const messages = [
     { id: 1, room: 'ui-feedback', text: 'Yeni ikon seti hazırdır, baxa bilərsən?', time: '2 dəq əvvəl' },
