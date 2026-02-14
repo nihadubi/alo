@@ -4,12 +4,14 @@ dotenv.config({ path: '.env.local' })
 dotenv.config()
 
 const express = (await import('express')).default
+const cors = (await import('cors')).default
 const { PrismaClient } = await import('@prisma/client')
 const { ClerkExpressRequireAuth, clerkClient } = await import('@clerk/clerk-sdk-node')
 
 const app = express()
 const prisma = new PrismaClient()
 
+app.use(cors())
 app.use(express.json())
 
 app.get('/api/health', (req, res) => {
