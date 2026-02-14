@@ -4,7 +4,7 @@ import { io } from 'socket.io-client'
 import axios from 'axios'
 import { useAuth } from '@clerk/clerk-react'
 
-function ChatArea({ activeChannel }) {
+function ChatArea({ activeChannel, onMembersChange }) {
   const { getToken, isSignedIn, userId } = useAuth()
   const [messages, setMessages] = useState([])
   const [messageInput, setMessageInput] = useState('')
@@ -38,6 +38,24 @@ function ChatArea({ activeChannel }) {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages.length])
+
+  useEffect(() => {
+    if (!onMembersChange) {
+      return
+    }
+    const map = new Map()
+    messages.forEach((message) => {
+      const name = message.profile?.name || 'İstifadəçi'
+      const imageUrl = message.profile?.imageUrl || ''
+      const key = `${name}-${imageUrl}`
+      const lastSeen = message.createdAt ? new Date(message.createdAt).getTime() : 0
+      const existing = map.get(key)
+      if (!existing || lastSeen > existing.lastSeen) {
+        map.set(key, { name, imageUrl, lastSeen })
+      }
+    })
+    onMembersChange(Array.from(map.values()))
+  }, [messages, onMembersChange])
 
   useEffect(() => {
     setMessages([])
