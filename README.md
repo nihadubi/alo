@@ -1,16 +1,48 @@
-# React + Vite
+# Alo
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Realtime mesajlaşma və səsli otaqlar üçün full-stack tətbiq.
 
-Currently, two official plugins are available:
+## Quraşdırma
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+```bash
+npm install
+```
 
-## React Compiler
+## Mühit dəyişənləri
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+`.env.local` faylı yaradın və aşağıdakıları əlavə edin:
 
-## Expanding the ESLint configuration
+```
+VITE_CLERK_PUBLISHABLE_KEY=...
+CLERK_SECRET_KEY=...
+DATABASE_URL=...
+LIVEKIT_API_KEY=...
+LIVEKIT_API_SECRET=...
+NEXT_PUBLIC_LIVEKIT_URL=...
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## İşə salma
+
+```bash
+npm run server
+```
+
+Başqa terminalda:
+
+```bash
+npm run dev
+```
+
+## Əsas endpoint-lər
+
+- `POST /api/profile/sync`
+- `GET /api/communities`
+- `POST /api/communities`
+- `GET /api/messages?communityId=...`
+- `POST /api/messages`
+- `POST /api/livekit/token`
+
+## Realtime
+
+- Socket.io server: `http://localhost:4000`
+- Frontend proxy: `http://localhost:5173`
