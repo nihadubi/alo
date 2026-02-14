@@ -7,6 +7,51 @@ html, body, #root {
   color: #e2e8f0; /* slate-200 */
 }
 
+.app-titlebar {
+  height: 36px;
+  background-color: #1e1f22;
+  color: #cbd5f5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  -webkit-app-region: drag;
+  padding: 0 8px 0 12px;
+}
+
+.app-titlebar__drag {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-titlebar__controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  -webkit-app-region: no-drag;
+}
+
+.app-titlebar__button {
+  width: 36px;
+  height: 26px;
+  border-radius: 8px;
+  background-color: #2b2d31;
+  color: #e2e8f0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+  border: none;
+}
+
+.app-titlebar__button:hover {
+  background-color: #3b3d43;
+}
+
+.app-titlebar__button--danger:hover {
+  background-color: #b91c1c;
+}
+
 /* Custom Scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
