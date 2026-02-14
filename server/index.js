@@ -1,7 +1,11 @@
-import 'dotenv/config'
-import express from 'express'
-import { PrismaClient } from '@prisma/client'
-import { ClerkExpressRequireAuth, clerkClient } from '@clerk/clerk-sdk-node'
+import dotenv from 'dotenv'
+
+dotenv.config({ path: '.env.local' })
+dotenv.config()
+
+const express = (await import('express')).default
+const { PrismaClient } = await import('@prisma/client')
+const { ClerkExpressRequireAuth, clerkClient } = await import('@clerk/clerk-sdk-node')
 
 const app = express()
 const prisma = new PrismaClient()
@@ -91,6 +95,19 @@ app.post('/api/profile/sync', ClerkExpressRequireAuth(), async (req, res) => {
     console.error(error)
     res.status(500).json({ error: 'PROFILE_SYNC_FAILED' })
   }
+})
+
+app.use((error, req, res, next) => {
+  void next
+  const code = error?.errors?.[0]?.code
+  const status = error?.status
+  const message = String(error?.message || '').toLowerCase()
+  if (code === 'unauthenticated' || status === 401 || message.includes('unauthenticated')) {
+    res.status(401).json({ error: 'UNAUTHENTICATED' })
+    return
+  }
+  console.error(error)
+  res.status(500).json({ error: 'INTERNAL_SERVER_ERROR' })
 })
 
 const port = process.env.PORT ? Number(process.env.PORT) : 4000
