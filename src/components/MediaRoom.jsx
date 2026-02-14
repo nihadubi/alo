@@ -9,6 +9,7 @@ import {
   LiveKitRoom,
   ParticipantTile,
   RoomAudioRenderer,
+  useRoomContext,
   useTracks,
 } from '@livekit/components-react'
 
@@ -42,7 +43,54 @@ function ParticipantsGrid() {
   )
 }
 
-function MediaRoom({ roomName }) {
+function SpeakersList() {
+  const tracks = useTracks([Track.Source.Microphone], { onlySubscribed: false })
+
+  if (!tracks.length) {
+    return <div className="text-xs text-slate-500">Hələ danışan yoxdur</div>
+  }
+
+  return (
+    <div className="space-y-3">
+      {tracks.map((track) => (
+        <div
+          key={`${track.participant.identity}-${track.source}`}
+          className={`rounded-xl bg-[#1E1F22] px-4 py-3 ${
+            track.participant.isSpeaking ? 'ring-1 ring-emerald-400/70' : ''
+          }`}
+        >
+          <div className="flex items-center justify-between text-xs text-slate-400">
+            <span className="text-slate-200">
+              {track.participant.name || track.participant.identity || 'İstifadəçi'}
+            </span>
+            {track.participant.isSpeaking ? (
+              <span className="text-[10px] uppercase tracking-[0.2em] text-emerald-300">Live</span>
+            ) : null}
+          </div>
+          <div className="mt-2">
+            <BarVisualizer trackRef={track} barCount={16} className="h-8 w-full" />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function RoomCleanup({ onConnectionChange }) {
+  const room = useRoomContext()
+
+  useEffect(() => {
+    return () => {
+      onConnectionChange?.(false)
+      room.localParticipant?.setMicrophoneEnabled(false)
+      room.disconnect()
+    }
+  }, [onConnectionChange, room])
+
+  return null
+}
+
+function MediaRoom({ roomName, onConnectionChange }) {
   const { getToken, isSignedIn } = useAuth()
   const [livekitToken, setLivekitToken] = useState('')
   const [serverUrl, setServerUrl] = useState('')
@@ -54,6 +102,8 @@ function MediaRoom({ roomName }) {
 
     const loadToken = async () => {
       try {
+        setLivekitToken('')
+        setServerUrl('')
         const token = await getToken()
         if (!token) {
           return
@@ -112,6 +162,8 @@ function MediaRoom({ roomName }) {
         connect
         audio
         video={false}
+        onConnected={() => onConnectionChange?.(true)}
+        onDisconnected={() => onConnectionChange?.(false)}
         data-lk-theme="default"
         className="flex-1 flex flex-col"
       >
@@ -129,6 +181,13 @@ function MediaRoom({ roomName }) {
               <ParticipantsGrid />
             </div>
           </div>
+
+          <div className="rounded-2xl bg-[#2B2D31] p-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Danışanlar</p>
+            <div className="mt-4">
+              <SpeakersList />
+            </div>
+          </div>
         </div>
 
         <div className="border-t border-black/20 px-6 py-4">
@@ -136,6 +195,7 @@ function MediaRoom({ roomName }) {
         </div>
 
         <RoomAudioRenderer />
+        <RoomCleanup onConnectionChange={onConnectionChange} />
       </LiveKitRoom>
     </main>
   )

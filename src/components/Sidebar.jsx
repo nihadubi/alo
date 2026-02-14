@@ -3,7 +3,7 @@ import axios from 'axios'
 import { Plus } from 'lucide-react'
 import { UserButton, useAuth } from '@clerk/clerk-react'
 
-function Sidebar({ activeChannel, onChannelChange }) {
+function Sidebar({ activeChannel, onChannelChange, isVoiceLive }) {
   const { getToken, isSignedIn } = useAuth()
   const [communities, setCommunities] = useState([])
   const [isOpen, setIsOpen] = useState(false)
@@ -36,6 +36,20 @@ function Sidebar({ activeChannel, onChannelChange }) {
 
     loadCommunities()
   }, [getToken, isSignedIn])
+
+  useEffect(() => {
+    if (!communities.length) {
+      if (!activeChannel?.id && activeChannel?.type !== 'audio') {
+        onChannelChange?.({ type: 'text', name: 'General', id: null })
+      }
+      return
+    }
+
+    if (!activeChannel?.id && activeChannel?.type !== 'audio') {
+      const first = communities[0]
+      onChannelChange?.({ type: 'text', name: first?.name || 'General', id: first?.id || null })
+    }
+  }, [activeChannel?.id, activeChannel?.type, communities, onChannelChange])
 
   const getInitials = (name) =>
     name
@@ -94,10 +108,12 @@ function Sidebar({ activeChannel, onChannelChange }) {
             key={community.id}
             type="button"
             onClick={() =>
-              onChannelChange?.({ type: 'text', name: community.name || 'Ümumi söhbət' })
+              onChannelChange?.({ type: 'text', name: community.name || 'Ümumi söhbət', id: community.id })
             }
             className={`h-12 w-12 rounded-full text-slate-200 flex items-center justify-center text-xs font-semibold transition-colors ${
-              activeChannel?.type === 'text' ? 'bg-indigo-500/80' : 'bg-[#2B2D31]'
+              activeChannel?.type === 'text' && activeChannel?.id === community.id
+                ? 'bg-indigo-500/80'
+                : 'bg-[#2B2D31]'
             }`}
           >
             {getInitials(community.name || '') || 'C'}
@@ -113,11 +129,14 @@ function Sidebar({ activeChannel, onChannelChange }) {
           <button
             type="button"
             onClick={() => onChannelChange?.({ type: 'audio', name: 'General' })}
-            className={`h-9 w-9 rounded-full text-[10px] text-slate-200 flex items-center justify-center transition-colors ${
+            className={`relative h-9 w-9 rounded-full text-[10px] text-slate-200 flex items-center justify-center transition-colors ${
               activeChannel?.type === 'audio' ? 'bg-indigo-500/80' : 'bg-[#2B2D31]'
             }`}
           >
             General
+            {isVoiceLive ? (
+              <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+            ) : null}
           </button>
         </div>
       </div>

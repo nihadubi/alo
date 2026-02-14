@@ -6,7 +6,8 @@ import MediaRoom from './components/MediaRoom.jsx';
 
 function App() {
   const [authView, setAuthView] = useState('signIn');
-  const [activeChannel, setActiveChannel] = useState({ type: 'text', name: 'Ümumi söhbət' });
+  const [activeChannel, setActiveChannel] = useState({ type: 'text', name: 'General', id: null });
+  const [isVoiceLive, setIsVoiceLive] = useState(false);
   const { isSignedIn, userId, getToken } = useAuth();
   const profileSyncRef = useRef({ status: 'idle', userId: null });
 
@@ -95,11 +96,15 @@ function App() {
 
       <SignedIn>
         <div className="flex h-screen bg-[#2B2D31] text-slate-200 overflow-hidden font-sans">
-          <Sidebar activeChannel={activeChannel} onChannelChange={setActiveChannel} />
+          <Sidebar
+            activeChannel={activeChannel}
+            onChannelChange={setActiveChannel}
+            isVoiceLive={isVoiceLive}
+          />
           {activeChannel?.type === 'audio' ? (
-            <MediaRoom roomName={activeChannel.name || 'General'} />
+            <MediaRoom roomName={activeChannel.name || 'General'} onConnectionChange={setIsVoiceLive} />
           ) : (
-            <ChatArea />
+            <ChatArea activeChannel={activeChannel} />
           )}
         </div>
       </SignedIn>

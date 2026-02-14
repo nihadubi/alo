@@ -4,12 +4,11 @@ import { io } from 'socket.io-client'
 import axios from 'axios'
 import { useAuth } from '@clerk/clerk-react'
 
-function ChatArea() {
+function ChatArea({ activeChannel }) {
   const { getToken, isSignedIn, userId } = useAuth()
   const [messages, setMessages] = useState([])
   const [messageInput, setMessageInput] = useState('')
   const [isSending, setIsSending] = useState(false)
-  const [activeCommunity, setActiveCommunity] = useState(null)
   const socketRef = useRef(null)
   const messagesEndRef = useRef(null)
 
@@ -41,34 +40,12 @@ function ChatArea() {
   }, [messages.length])
 
   useEffect(() => {
-    if (!isSignedIn) {
-      return
-    }
-
-    const loadCommunities = async () => {
-      try {
-        const token = await getToken()
-        if (!token) {
-          return
-        }
-        const response = await axios.get('/api/communities', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
-        if (Array.isArray(response.data) && response.data.length > 0) {
-          setActiveCommunity(response.data[0])
-        }
-      } catch (error) {
-        console.error('Communities fetch failed', error)
-      }
-    }
-
-    loadCommunities()
-  }, [getToken, isSignedIn])
+    setMessages([])
+    setMessageInput('')
+  }, [activeChannel?.id])
 
   useEffect(() => {
-    if (!isSignedIn || !activeCommunity?.id) {
+    if (!isSignedIn || !activeChannel?.id) {
       return
     }
 
@@ -80,7 +57,7 @@ function ChatArea() {
         }
         const response = await axios.get('/api/messages', {
           params: {
-            communityId: activeCommunity.id,
+            communityId: activeChannel.id,
           },
           headers: {
             Authorization: `Bearer ${token}`,
@@ -95,7 +72,7 @@ function ChatArea() {
     }
 
     loadMessages()
-  }, [activeCommunity?.id, getToken, isSignedIn])
+  }, [activeChannel?.id, getToken, isSignedIn])
 
   useEffect(() => {
     if (!isSignedIn || socketRef.current) {
@@ -122,15 +99,15 @@ function ChatArea() {
   }, [isSignedIn])
 
   useEffect(() => {
-    if (!socketRef.current || !activeCommunity?.id) {
+    if (!socketRef.current || !activeChannel?.id) {
       return
     }
-    socketRef.current.emit('room:join', { communityId: activeCommunity.id })
-  }, [activeCommunity?.id])
+    socketRef.current.emit('room:join', { communityId: activeChannel.id })
+  }, [activeChannel?.id])
 
   const handleSend = async () => {
     const content = messageInput.trim()
-    if (!content || isSending || !activeCommunity?.id) {
+    if (!content || isSending || !activeChannel?.id) {
       return
     }
 
@@ -142,7 +119,7 @@ function ChatArea() {
       }
       const response = await axios.post(
         '/api/messages',
-        { content, communityId: activeCommunity.id, userId },
+        { content, communityId: activeChannel.id, userId },
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -169,7 +146,7 @@ function ChatArea() {
     }
   }
 
-  const isSendDisabled = isSending || !activeCommunity?.id || !messageInput.trim()
+  const isSendDisabled = isSending || !activeChannel?.id || !messageInput.trim()
 
   return (
     <main className="flex-1 flex flex-col bg-[#313338] text-slate-200">
@@ -177,7 +154,7 @@ function ChatArea() {
         <div>
           <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Mesajlar</p>
           <h2 className="text-lg font-semibold text-slate-100">
-            {activeCommunity?.name || 'Ümumi söhbət'}
+            {activeChannel?.name || 'Ümumi söhbət'}
           </h2>
         </div>
         <div className="text-xs text-slate-500">Aktiv</div>
