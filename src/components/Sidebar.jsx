@@ -99,6 +99,17 @@ function Sidebar() {
         ))}
       </div>
 
+      <div className="w-full px-3 pb-4">
+        <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 text-center">
+          Səsli Kanallar
+        </p>
+        <div className="mt-3 flex items-center justify-center">
+          <div className="h-9 w-9 rounded-full bg-[#2B2D31] text-[10px] text-slate-200 flex items-center justify-center">
+            General
+          </div>
+        </div>
+      </div>
+
       <div className="pb-2">
         <div className="h-12 w-12 rounded-2xl bg-[#313338] flex items-center justify-center overflow-hidden">
           <UserButton afterSignOutUrl="/" />

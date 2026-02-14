@@ -11,6 +11,7 @@ function ChatArea() {
   const [isSending, setIsSending] = useState(false)
   const [activeCommunity, setActiveCommunity] = useState(null)
   const socketRef = useRef(null)
+  const messagesEndRef = useRef(null)
 
   const formatTime = (value) => {
     if (!value) {
@@ -34,6 +35,10 @@ function ChatArea() {
       return [...prev, message]
     })
   }
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages.length])
 
   useEffect(() => {
     if (!isSignedIn) {
@@ -158,9 +163,13 @@ function ChatArea() {
   const handleKeyDown = (event) => {
     if (event.key === 'Enter') {
       event.preventDefault()
-      handleSend()
+      if (messageInput.trim()) {
+        handleSend()
+      }
     }
   }
+
+  const isSendDisabled = isSending || !activeCommunity?.id || !messageInput.trim()
 
   return (
     <main className="flex-1 flex flex-col bg-[#313338] text-slate-200">
@@ -177,7 +186,7 @@ function ChatArea() {
       <div className="flex-1 overflow-y-auto custom-scrollbar px-6 py-5 space-y-4">
         {messages.map((message) => (
           <div key={message.id} className="rounded-2xl bg-[#2B2D31] p-4 flex gap-3">
-            <div className="h-10 w-10 rounded-full bg-[#1E1F22] flex items-center justify-center overflow-hidden">
+            <div className="h-9 w-9 rounded-full bg-[#1E1F22] flex items-center justify-center overflow-hidden">
               {message.profile?.imageUrl ? (
                 <img
                   src={message.profile.imageUrl}
@@ -185,22 +194,23 @@ function ChatArea() {
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <span className="text-xs font-semibold text-slate-300">
+                <span className="text-[11px] font-semibold text-slate-300">
                   {(message.profile?.name || 'U')[0]?.toUpperCase()}
                 </span>
               )}
             </div>
             <div className="flex-1">
-              <div className="flex items-center gap-3">
-                <p className="text-sm font-medium text-slate-100">
+              <div className="flex items-center gap-2">
+                <p className="text-xs font-semibold text-slate-100">
                   {message.profile?.name || 'İstifadəçi'}
                 </p>
-                <span className="text-xs text-slate-500">{formatTime(message.createdAt)}</span>
+                <span className="text-[10px] text-slate-500">{formatTime(message.createdAt)}</span>
               </div>
               <p className="mt-2 text-sm text-slate-300">{message.content}</p>
             </div>
           </div>
         ))}
+        <div ref={messagesEndRef} />
       </div>
 
       <div className="p-4 border-t border-black/20">
@@ -216,7 +226,7 @@ function ChatArea() {
           <button
             type="button"
             onClick={handleSend}
-            disabled={isSending}
+            disabled={isSendDisabled}
             className="h-9 w-9 rounded-xl bg-indigo-500/80 text-white flex items-center justify-center hover:bg-indigo-500 disabled:opacity-60"
           >
             <Send size={16} />
