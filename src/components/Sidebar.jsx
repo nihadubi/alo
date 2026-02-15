@@ -384,8 +384,7 @@ function Sidebar({
                               const imageUrl =
                                 (isSelf ? currentUserImageUrl : memberImageByIdentity.get(identity)) || ''
                               const resolvedName =
-                                (isSelf ? currentUserName : memberNameByIdentity.get(identity)) ||
-                                (participant.name && participant.name !== 'İstifadəçi' ? participant.name : '')
+                                (isSelf ? currentUserName : memberNameByIdentity.get(identity)) || participant.name || ''
                               const fallbackName = resolvedName || 'Yüklənir...'
                               return (
                                 <div

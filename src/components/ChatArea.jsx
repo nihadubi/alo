@@ -206,7 +206,7 @@ function ChatArea({ activeChannel, onMembersChange }) {
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <p className="text-xs font-semibold text-slate-100">
-                  {message.profile?.name || 'İstifadəçi'}
+                  {message.profile?.name || message.profile?.userId || 'Yüklənir...'}
                 </p>
                 <span className="text-[10px] text-slate-500">{formatTime(message.createdAt)}</span>
               </div>

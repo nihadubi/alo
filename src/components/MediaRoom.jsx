@@ -33,7 +33,7 @@ function VoiceParticipantsSync({ onParticipantsChange }) {
       const allParticipants = [room.localParticipant, ...Array.from(room.remoteParticipants.values())].filter(Boolean)
       const payload = allParticipants.map((participant) => ({
         identity: participant.identity,
-        name: participant.name || participant.identity || 'İstifadəçi',
+        name: participant.name || participant.identity || '',
         isSpeaking: participant.isSpeaking,
       }))
       onParticipantsChange(payload)

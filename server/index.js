@@ -199,7 +199,7 @@ app.post('/api/livekit/token', ClerkExpressRequireAuth(), async (req, res) => {
       return
     }
 
-    const livekitUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL
+    const livekitUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL || process.env.LIVEKIT_URL
     if (!livekitUrl) {
       res.status(500).json({ error: 'LIVEKIT_URL_MISSING' })
       return
