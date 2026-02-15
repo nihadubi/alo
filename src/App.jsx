@@ -99,12 +99,12 @@ function App() {
     const list = members.filter((member) => member.name).map((member) => ({ ...member }));
     const name = displayName || user?.fullName || user?.username || 'Sən';
     const imageUrl = user?.imageUrl || '';
-    const hasSelf = list.some((item) => item.name === name && item.imageUrl === imageUrl);
+    const hasSelf = list.some((item) => item.userId && item.userId === userId);
     if (!hasSelf && name) {
-      list.unshift({ name, imageUrl, lastSeen: now, isSelf: true });
+      list.unshift({ name, imageUrl, lastSeen: now, isSelf: true, userId });
     }
     return list;
-  }, [displayName, members, now, user]);
+  }, [displayName, members, now, user, userId]);
 
   useEffect(() => {
     const syncProfile = async () => {
@@ -228,6 +228,10 @@ function App() {
             voiceParticipants={voiceParticipants}
             onJoinAudio={handleJoinAudio}
             onDisconnectVoice={handleDisconnectVoice}
+            members={membersWithSelf}
+            currentUserName={displayName || user?.fullName || user?.username || ''}
+            currentUserImageUrl={user?.imageUrl || ''}
+            currentUserId={userId || ''}
             displayName={displayName}
             onDisplayNameChange={setDisplayName}
             isMuted={isMuted}

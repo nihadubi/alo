@@ -260,6 +260,7 @@ app.get('/api/messages', ClerkExpressRequireAuth(), async (req, res) => {
           select: {
             name: true,
             imageUrl: true,
+            userId: true,
           },
         },
       },

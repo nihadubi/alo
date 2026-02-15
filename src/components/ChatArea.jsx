@@ -47,14 +47,15 @@ function ChatArea({ activeChannel, onMembersChange }) {
     messages.forEach((message) => {
       const name = message.profile?.name?.trim() || ''
       const imageUrl = message.profile?.imageUrl || ''
+      const memberUserId = message.profile?.userId || ''
       if (!name) {
         return
       }
-      const key = `${name}-${imageUrl}`
+      const key = memberUserId ? `user:${memberUserId}` : `${name}-${imageUrl}`
       const lastSeen = message.createdAt ? new Date(message.createdAt).getTime() : 0
       const existing = map.get(key)
       if (!existing || lastSeen > existing.lastSeen) {
-        map.set(key, { name, imageUrl, lastSeen })
+        map.set(key, { name, imageUrl, lastSeen, userId: memberUserId || undefined })
       }
     })
     onMembersChange(Array.from(map.values()))

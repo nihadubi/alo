@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import axios from 'axios'
-import { MessageCircle, Plus } from 'lucide-react'
-import { useAuth } from '@clerk/clerk-react'
+import { Headphones, MessageCircle, Mic, Plus, Settings } from 'lucide-react'
+import { UserButton, useAuth } from '@clerk/clerk-react'
 import VoiceControl from './VoiceControl.jsx'
 
 function Sidebar({
@@ -14,6 +14,10 @@ function Sidebar({
   voiceParticipants,
   onJoinAudio,
   onDisconnectVoice,
+  members,
+  currentUserName,
+  currentUserImageUrl,
+  currentUserId,
   displayName,
   onDisplayNameChange,
   isMuted,
@@ -109,6 +113,36 @@ function Sidebar({
     }
     return channelsByCommunity[activeCommunityId] || { text: [], audio: [] }
   }, [activeCommunityId, channelsByCommunity])
+
+  const memberImageByIdentity = useMemo(() => {
+    const map = new Map()
+    if (Array.isArray(members)) {
+      members.forEach((member) => {
+        if (member?.userId && !map.has(member.userId)) {
+          map.set(member.userId, member.imageUrl || '')
+        }
+      })
+    }
+    if (currentUserId && currentUserImageUrl && !map.has(currentUserId)) {
+      map.set(currentUserId, currentUserImageUrl)
+    }
+    return map
+  }, [currentUserId, currentUserImageUrl, members])
+
+  const memberNameByIdentity = useMemo(() => {
+    const map = new Map()
+    if (Array.isArray(members)) {
+      members.forEach((member) => {
+        if (member?.userId && !map.has(member.userId)) {
+          map.set(member.userId, member.name || '')
+        }
+      })
+    }
+    if (currentUserId && currentUserName && !map.has(currentUserId)) {
+      map.set(currentUserId, currentUserName)
+    }
+    return map
+  }, [currentUserId, currentUserName, members])
 
   const activeCommunityName = useMemo(() => {
     if (!activeCommunityId) {
@@ -261,23 +295,9 @@ function Sidebar({
           ))}
         </div>
 
-        {voiceChannel ? (
-          <div className="mt-auto w-full px-2 pb-3 relative z-20">
-            <VoiceControl
-              isConnected={Boolean(voiceChannel)}
-              channelName={voiceChannel?.name}
-              serverName={activeCommunityName}
-              displayName={displayName}
-              isMuted={isMuted}
-              onToggleMute={onToggleMute}
-              onDisconnect={onDisconnectVoice}
-              onEditProfile={handleOpenProfile}
-            />
-          </div>
-        ) : null}
       </div>
 
-      <div className="flex-1 flex flex-col px-4 py-4">
+      <div className="flex-1 flex flex-col px-4 py-4 h-full">
         <div className="flex items-center justify-between">
           <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
             {isDM ? 'Direct Messages' : 'Server Kanalları'}
@@ -354,26 +374,39 @@ function Sidebar({
                         />
                       </button>
                       {voiceChannel?.id === channel.id ? (
-                        <div className="mt-2 space-y-2 pl-5">
+                        <div className="mt-2 w-full space-y-2 pl-3">
                           {voiceParticipants.length === 0 ? (
                             <div className="text-xs text-slate-500">Heç kim qoşulmayıb</div>
                           ) : (
-                            voiceParticipants.map((participant) => (
-                              <div
-                                key={participant.identity}
-                                className="flex items-center gap-2 rounded-lg bg-[#1E1F22] px-2 py-1 text-xs text-slate-200"
-                              >
-                                <div className="h-5 w-5 rounded-full bg-[#111318] flex items-center justify-center text-[9px] font-semibold text-slate-300">
-                                  {getInitials(participant.name || '') || 'U'}
+                            voiceParticipants.map((participant) => {
+                              const identity = participant.identity
+                              const isSelf = identity && identity === currentUserId
+                              const imageUrl =
+                                (isSelf ? currentUserImageUrl : memberImageByIdentity.get(identity)) || ''
+                              const resolvedName =
+                                (isSelf ? currentUserName : memberNameByIdentity.get(identity)) ||
+                                (participant.name && participant.name !== 'İstifadəçi' ? participant.name : '')
+                              const fallbackName = resolvedName || 'Yüklənir...'
+                              return (
+                                <div
+                                  key={participant.identity}
+                                  className="flex w-full items-center gap-2 rounded-lg bg-[#1E1F22] px-2 py-1 text-xs text-slate-200"
+                                >
+                                  <div
+                                    className={`h-5 w-5 rounded-full bg-[#111318] flex items-center justify-center text-[9px] font-semibold text-slate-300 overflow-hidden ${
+                                      participant.isSpeaking ? 'ring-2 ring-emerald-400 ring-offset-1 ring-offset-[#1E1F22]' : ''
+                                    }`}
+                                  >
+                                    {imageUrl ? (
+                                      <img src={imageUrl} alt={fallbackName} className="h-full w-full object-cover" />
+                                    ) : (
+                                      getInitials(fallbackName || '') || 'U'
+                                    )}
+                                  </div>
+                                  <span className="min-w-0 flex-1 truncate">{fallbackName}</span>
                                 </div>
-                                <span
-                                  className={`h-2 w-2 rounded-full ${
-                                    participant.isSpeaking ? 'bg-emerald-400' : 'bg-slate-600'
-                                  }`}
-                                />
-                                <span className="truncate">{participant.name}</span>
-                              </div>
-                            ))
+                              )
+                            })
                           )}
                         </div>
                       ) : null}
@@ -384,6 +417,49 @@ function Sidebar({
             </>
           )}
         </div>
+
+        {voiceChannel ? (
+          <div className="mt-auto w-full pt-3">
+            <VoiceControl
+              isConnected={Boolean(voiceChannel)}
+              channelName={voiceChannel?.name}
+              serverName={activeCommunityName}
+              currentUserName={currentUserName}
+              currentUserImageUrl={currentUserImageUrl}
+              isMuted={isMuted}
+              onToggleMute={onToggleMute}
+              onDisconnect={onDisconnectVoice}
+              onEditProfile={handleOpenProfile}
+            />
+          </div>
+        ) : (
+          <div className="mt-auto" />
+        )}
+
+        {!voiceChannel ? (
+          <div className="mt-2 rounded-md border border-[#2b2d31] bg-[#1e1f22] px-2 py-2 text-[10px] text-slate-300">
+            <div className="flex items-center gap-2">
+              <div className="h-9 w-9 rounded-full bg-[#111318] flex items-center justify-center overflow-hidden">
+                <UserButton afterSignOutUrl="/" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[11px] font-semibold text-slate-100">{displayName || 'nihad'}</p>
+                <p className="text-[9px] text-slate-500">Online</p>
+              </div>
+              <div className="flex items-center gap-2 text-slate-400">
+                <button type="button" onClick={() => onToggleMute?.()} className="hover:text-slate-200">
+                  <Mic size={14} />
+                </button>
+                <button type="button" className="hover:text-slate-200">
+                  <Headphones size={14} />
+                </button>
+                <button type="button" onClick={handleOpenProfile} className="hover:text-slate-200">
+                  <Settings size={14} />
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {isOpen && (
