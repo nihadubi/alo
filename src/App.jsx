@@ -49,8 +49,12 @@ function App() {
   const [authView, setAuthView] = useState('signIn');
   const [activeChannel, setActiveChannel] = useState({ type: 'text', name: 'General', id: null });
   const [isVoiceLive, setIsVoiceLive] = useState(false);
+  const [voiceChannel, setVoiceChannel] = useState(null);
+  const [voiceParticipants, setVoiceParticipants] = useState([]);
+  const [isMuted, setIsMuted] = useState(false);
   const [isDM, setIsDM] = useState(false);
   const [members, setMembers] = useState([]);
+  const [displayName, setDisplayName] = useState('');
   const [now, setNow] = useState(0);
   const { isSignedIn, userId, getToken } = useAuth();
   const { user } = useUser();
@@ -63,6 +67,22 @@ function App() {
     setIsDM(false);
   }, []);
 
+  const handleJoinAudio = useCallback((channel) => {
+    setVoiceChannel(channel);
+    setIsDM(false);
+  }, []);
+
+  const handleDisconnectVoice = useCallback(() => {
+    setVoiceChannel(null);
+    setVoiceParticipants([]);
+    setIsVoiceLive(false);
+    setIsMuted(false);
+  }, []);
+
+  const handleToggleMute = useCallback(() => {
+    setIsMuted((prev) => !prev);
+  }, []);
+
   const handleToggleDM = useCallback(() => {
     setIsDM(true);
   }, []);
@@ -71,16 +91,20 @@ function App() {
     setMembers(items);
   }, []);
 
+  const handleVoiceParticipantsChange = useCallback((items) => {
+    setVoiceParticipants(items);
+  }, []);
+
   const membersWithSelf = useMemo(() => {
-    const list = [...members];
-    const name = user?.fullName || user?.username || 'Sən';
+    const list = members.filter((member) => member.name).map((member) => ({ ...member }));
+    const name = displayName || user?.fullName || user?.username || 'Sən';
     const imageUrl = user?.imageUrl || '';
     const hasSelf = list.some((item) => item.name === name && item.imageUrl === imageUrl);
     if (!hasSelf && name) {
       list.unshift({ name, imageUrl, lastSeen: now, isSelf: true });
     }
     return list;
-  }, [members, now, user]);
+  }, [displayName, members, now, user]);
 
   useEffect(() => {
     const syncProfile = async () => {
@@ -115,6 +139,11 @@ function App() {
           return;
         }
 
+        const payload = await response.json().catch(() => null);
+        if (payload?.profile?.name) {
+          setDisplayName(payload.profile.name);
+        }
+
         profileSyncRef.current = { status: 'done', userId };
       } catch (error) {
         console.error('Profile sync failed', error);
@@ -124,6 +153,15 @@ function App() {
 
     syncProfile();
   }, [apiBaseUrl, getToken, isSignedIn, userId]);
+
+  useEffect(() => {
+    if (!displayName && (user?.fullName || user?.username)) {
+      const timeout = setTimeout(() => {
+        setDisplayName(user?.fullName || user?.username || '');
+      }, 0);
+      return () => clearTimeout(timeout);
+    }
+  }, [displayName, user]);
 
   useEffect(() => {
     const tick = () => {
@@ -186,6 +224,14 @@ function App() {
             isVoiceLive={isVoiceLive}
             isDM={isDM}
             onToggleDM={handleToggleDM}
+            voiceChannel={voiceChannel}
+            voiceParticipants={voiceParticipants}
+            onJoinAudio={handleJoinAudio}
+            onDisconnectVoice={handleDisconnectVoice}
+            displayName={displayName}
+            onDisplayNameChange={setDisplayName}
+            isMuted={isMuted}
+            onToggleMute={handleToggleMute}
           />
           <div className="flex flex-1 overflow-hidden">
             {isDM ? (
@@ -201,17 +247,25 @@ function App() {
                   Bir DM seçin və söhbətə başlayın
                 </div>
               </div>
-            ) : activeChannel?.type === 'audio' ? (
-              <MediaRoom roomName={activeChannel.name || 'General'} onConnectionChange={setIsVoiceLive} />
             ) : (
               <ChatArea activeChannel={activeChannel} onMembersChange={handleMembersChange} />
             )}
+            {voiceChannel ? (
+              <div className="hidden">
+                <MediaRoom
+                  roomName={voiceChannel.name || 'General'}
+                  onConnectionChange={setIsVoiceLive}
+                  onParticipantsChange={handleVoiceParticipantsChange}
+                  micEnabled={!isMuted}
+                />
+              </div>
+            ) : null}
             {!isDM && activeChannel?.type !== 'audio' ? (
-              <div className="w-64 bg-[#1E1F22] border-l border-black/20 flex flex-col">
-                <div className="h-16 px-4 flex items-center border-b border-black/20">
+              <div className="w-56 bg-[#1E1F22] border-l border-black/20 flex flex-col">
+                <div className="h-16 px-3 flex items-center border-b border-black/20">
                   <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Üzvlər</p>
                 </div>
-                <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2 custom-scrollbar">
                   {membersWithSelf.length === 0 ? (
                     <div className="text-xs text-slate-500">Üzv tapılmadı</div>
                   ) : (
@@ -238,7 +292,7 @@ function App() {
                             />
                           </div>
                           <div className="flex-1">
-                            <p className="text-sm font-medium text-slate-200">{member.name || 'İstifadəçi'}</p>
+                            <p className="text-sm font-medium text-slate-200">{member.name}</p>
                             <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500">
                               {isOnline ? 'Onlayn' : 'Oflayn'}
                             </p>

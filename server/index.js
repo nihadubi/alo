@@ -132,19 +132,61 @@ app.post('/api/profile/sync', ClerkExpressRequireAuth(), async (req, res) => {
     const userId = req.auth.userId
     const user = await clerkClient.users.getUser(userId)
     const email = user.emailAddresses?.[0]?.emailAddress ?? null
-    const name = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.username || null
+    const defaultName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.username || null
+    const imageUrl = user.imageUrl || null
+
+    const existingProfile = await prisma.profile.findUnique({
+      where: { userId },
+      select: { id: true, name: true },
+    })
+
+    let profile = null
+
+    if (existingProfile) {
+      const updateData = { email, imageUrl }
+      if (!existingProfile.name && defaultName) {
+        updateData.name = defaultName
+      }
+      profile = await prisma.profile.update({
+        where: { userId },
+        data: updateData,
+      })
+    } else {
+      profile = await prisma.profile.create({
+        data: { userId, email, name: defaultName, imageUrl },
+      })
+    }
+
+    res.json({ profile })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'PROFILE_SYNC_FAILED' })
+  }
+})
+
+app.post('/api/profile/update', ClerkExpressRequireAuth(), async (req, res) => {
+  try {
+    const userId = req.auth.userId
+    const name = typeof req.body?.name === 'string' ? req.body.name.trim() : ''
+    if (!name || name.length < 2 || name.length > 32) {
+      res.status(400).json({ error: 'NAME_INVALID' })
+      return
+    }
+
+    const user = await clerkClient.users.getUser(userId)
+    const email = user.emailAddresses?.[0]?.emailAddress ?? null
     const imageUrl = user.imageUrl || null
 
     const profile = await prisma.profile.upsert({
       where: { userId },
-      update: { email, name, imageUrl },
+      update: { name, email, imageUrl },
       create: { userId, email, name, imageUrl },
     })
 
     res.json({ profile })
   } catch (error) {
     console.error(error)
-    res.status(500).json({ error: 'PROFILE_SYNC_FAILED' })
+    res.status(500).json({ error: 'PROFILE_UPDATE_FAILED' })
   }
 })
 
