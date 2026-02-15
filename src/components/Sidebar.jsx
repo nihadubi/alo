@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import axios from 'axios'
-import { Headphones, MessageCircle, Mic, Plus, Settings } from 'lucide-react'
-import { UserButton, useAuth } from '@clerk/clerk-react'
+import { MessageCircle, Plus } from 'lucide-react'
+import { useAuth } from '@clerk/clerk-react'
 import VoiceControl from './VoiceControl.jsx'
 
 function Sidebar({
@@ -223,7 +223,7 @@ function Sidebar({
 
   return (
     <aside className="w-[280px] bg-[#1E1F22] flex text-slate-200">
-      <div className="w-[72px] flex flex-col items-center py-4 border-r border-black/20">
+      <div className="w-[72px] flex flex-col items-center py-4 border-r border-black/20 h-full">
         <button
           type="button"
           onClick={() => onToggleDM?.()}
@@ -261,36 +261,20 @@ function Sidebar({
           ))}
         </div>
 
-        <div className="mt-3 w-full px-3 space-y-2 relative z-20">
-          <VoiceControl
-            isConnected={Boolean(voiceChannel)}
-            channelName={voiceChannel?.name}
-            serverName={activeCommunityName}
-            isMuted={isMuted}
-            onToggleMute={onToggleMute}
-            onDisconnect={onDisconnectVoice}
-          />
-          <div className="rounded-md bg-[#1e1f22] px-2 py-2 text-[10px] text-slate-200 flex items-center gap-2">
-            <div className="h-9 w-9 rounded-full bg-[#111318] flex items-center justify-center overflow-hidden">
-              <UserButton afterSignOutUrl="/" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="truncate text-[11px] font-semibold text-slate-100">{displayName || 'İstifadəçi'}</p>
-              <p className="text-[9px] text-slate-500">Code +1</p>
-            </div>
-            <div className="flex items-center gap-2 text-slate-400">
-              <button type="button" onClick={() => onToggleMute?.()} className="hover:text-slate-200">
-                <Mic size={14} />
-              </button>
-              <button type="button" className="hover:text-slate-200">
-                <Headphones size={14} />
-              </button>
-              <button type="button" onClick={handleOpenProfile} className="hover:text-slate-200">
-                <Settings size={14} />
-              </button>
-            </div>
+        {voiceChannel ? (
+          <div className="mt-auto w-full px-2 pb-3 relative z-20">
+            <VoiceControl
+              isConnected={Boolean(voiceChannel)}
+              channelName={voiceChannel?.name}
+              serverName={activeCommunityName}
+              displayName={displayName}
+              isMuted={isMuted}
+              onToggleMute={onToggleMute}
+              onDisconnect={onDisconnectVoice}
+              onEditProfile={handleOpenProfile}
+            />
           </div>
-        </div>
+        ) : null}
       </div>
 
       <div className="flex-1 flex flex-col px-4 py-4">
